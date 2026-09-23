@@ -26,11 +26,17 @@ neste app.
 
 O upload ao vivo (converte o desenho, mede peso/diâmetro e gera o visor
 3D real da peça) depende do `cadquery` (kernel CAD), incluído no
-`requirements.txt`. Se o build da nuvem gratuita não conseguir instalar
-essa dependência (é pesada — kernel CAD completo), a interface degrada
-sozinha: mostra um aviso educado em vez de quebrar, e as demais funções
-(peso/diâmetro digitados, visor 3D ilustrativo por família, faixa de
-tempo, custo) continuam funcionando normalmente.
+`requirements.txt`. Esse pacote traz um binário nativo (OCP/OpenCascade)
+que precisa de algumas bibliotecas gráficas do sistema — por isso o
+`packages.txt` (lido automaticamente pelo Streamlit Community Cloud antes
+do `pip install`) declara `libgl1`, `libglu1-mesa`, `libxrender1`,
+`libxext6`, `libsm6`, `libice6` e `libgomp1`. Sem esse arquivo, o
+`cadquery` pode instalar mas falhar ao carregar — o app captura isso e
+mostra um aviso em vez de quebrar, mas o upload real não funciona.
+
+Se mesmo assim o upload não funcionar em algum ambiente hospedado, as
+demais funções (peso/diâmetro digitados, visor 3D ilustrativo por
+família, faixa de tempo, custo) continuam funcionando normalmente.
 
 ## Estimativa de apoio, não cotação
 
