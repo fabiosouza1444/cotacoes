@@ -22,14 +22,15 @@ cotação), scripts de treino/extração, nem as tarifas internas completas —
 `config_custos.py` traz só a fórmula e as tarifas já decididas para uso
 neste app.
 
-## Limitação nesta versão hospedada
+## Sobre o upload de `.stp`
 
-O upload de `.stp` real (conversão ao vivo pra medir peso/diâmetro/3D da
-peça) depende do pacote `cadquery` (kernel CAD), que não está incluído
-neste deploy — é uma dependência pesada demais para build em nuvem
-gratuita. A interface avisa isso quando alguém tenta subir um arquivo; as
-demais funções (estimativa a partir de peso/diâmetro digitados, visor 3D
-ilustrativo, faixa de tempo, custo) funcionam normalmente.
+O upload ao vivo (converte o desenho, mede peso/diâmetro e gera o visor
+3D real da peça) depende do `cadquery` (kernel CAD), incluído no
+`requirements.txt`. Se o build da nuvem gratuita não conseguir instalar
+essa dependência (é pesada — kernel CAD completo), a interface degrada
+sozinha: mostra um aviso educado em vez de quebrar, e as demais funções
+(peso/diâmetro digitados, visor 3D ilustrativo por família, faixa de
+tempo, custo) continuam funcionando normalmente.
 
 ## Estimativa de apoio, não cotação
 
