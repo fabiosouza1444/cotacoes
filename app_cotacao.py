@@ -49,6 +49,64 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------------------
+# Login (gate simples, usuario/senha compartilhados do comercial)
+# ---------------------------------------------------------------------------
+# Nao guarda senha no codigo -- vem de st.secrets (local: .streamlit/
+# secrets.toml, gitignorado; hospedado: configurado no painel do Streamlit
+# Community Cloud em "Settings > Secrets"). Autenticacao fica em
+# st.session_state, ou seja, vale so pra aquela aba/sessao do navegador.
+
+def _exigir_login() -> None:
+    if st.session_state.get("autenticado"):
+        return
+
+    try:
+        credencial_usuario = st.secrets["auth"]["usuario"]
+        credencial_senha = st.secrets["auth"]["senha"]
+    except (KeyError, FileNotFoundError):
+        st.error(
+            "Login não configurado neste servidor — falta o bloco `[auth]` "
+            "em secrets (usuario/senha)."
+        )
+        st.stop()
+
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+        html, body, [class*="st-"], .stApp {
+            font-family: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+        }
+        .stApp { background: #EFF1EF; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    _, col, _ = st.columns([1, 1.1, 1])
+    with col:
+        st.markdown(
+            "<div style='margin-top:14vh; text-align:center;'>"
+            "<p style='font-family:\"IBM Plex Mono\",monospace; font-size:0.78rem; "
+            "color:#7C8CA0; margin-bottom:0.3rem;'>Cinpal · apoio ao custeio</p>"
+            "<h2 style='color:#14304F; margin-top:0;'>Acesso restrito</h2></div>",
+            unsafe_allow_html=True,
+        )
+        with st.form("form_login"):
+            usuario = st.text_input("Usuário")
+            senha = st.text_input("Senha", type="password")
+            entrar = st.form_submit_button("Entrar", use_container_width=True)
+        if entrar:
+            if usuario.strip() == credencial_usuario and senha == credencial_senha:
+                st.session_state["autenticado"] = True
+                st.rerun()
+            else:
+                st.error("Usuário ou senha incorretos.")
+    st.stop()
+
+
+_exigir_login()
+
+# ---------------------------------------------------------------------------
 # Modelos disponiveis
 # ---------------------------------------------------------------------------
 # Cada entrada aqui e um modelo TREINADO E VALIDADO de verdade (ver

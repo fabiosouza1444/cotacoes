@@ -11,6 +11,26 @@ pip install -r requirements.txt
 streamlit run app_cotacao.py
 ```
 
+## Login
+
+O app pede usuário/senha antes de mostrar qualquer coisa. Não fica no
+código — vem de "secrets":
+
+- **Local**: crie `.streamlit/secrets.toml` (já no `.gitignore`, nunca vai
+  pro GitHub) com:
+  ```toml
+  [auth]
+  usuario = "comercial"
+  senha = "comercial"
+  ```
+- **Streamlit Community Cloud**: no painel do app, `Settings > Secrets`,
+  cole o mesmo bloco acima. Precisa configurar lá também — o `secrets.toml`
+  local não é enviado com o `git push`.
+
+O login vale só pra aba/sessão do navegador (fecha o navegador, pede de
+novo) — é uma camada simples pra não deixar o link solto publicamente,
+não um controle de acesso por usuário individual.
+
 ## O que este repositório contém (e por quê)
 
 Só o necessário pra rodar o app — os modelos treinados (`.pkl`), o código
