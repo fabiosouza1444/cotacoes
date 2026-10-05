@@ -38,6 +38,7 @@ import streamlit.components.v1 as components
 
 import visor3d
 from config_custos import custo_forjado, custo_usinagem, CUSTO_HORA_USINAGEM
+from carga_maquina import prensa_para_diametro
 
 BASE = Path(__file__).parent
 
@@ -513,18 +514,47 @@ with col_form:
         for i, feat in enumerate(FEATURES_PEDIDAS):
             with cols[i % len(cols)]:
                 if feat == "tonelagem":
-                    # não é um valor livre -- são as prensas reais que a
-                    # Cinpal tem (vistas nos roteiros de forjaria). Não dá
-                    # pra identificar isso a partir da geometria do .stp
-                    # (é decisão de processo, não propriedade da peça) --
-                    # fica sempre manual, de propósito.
+                    # A tonelagem (prensa) é DERIVADA da carga de forjamento,
+                    # que vem do DIÂMETRO da peça -- ver carga_maquina.py, que
+                    # replica a planilha CALCULO DE CARGA - FORJARIA. Isso
+                    # resolve a limitação antiga (a prensa não precisava mais
+                    # ser decisão de processo: dá pra estimar pré-cotação a
+                    # partir do desenho). O selectbox abaixo permite ajuste.
+                    diam_padrao = (
+                        float(analise_stp["diametro_max_mm"])
+                        if analise_stp is not None else 0.0
+                    )
+                    diametro_carga = st.number_input(
+                        "Diâmetro da peça (mm)",
+                        value=diam_padrao, step=1.0, min_value=0.0, max_value=2000.0,
+                        help="Calcula a carga de forjamento e escolhe a prensa "
+                             "(carga máquina). Vem do .stp se houver.",
+                        key=f"{tipo_peca}_diam_carga_{id_origem}",
+                    )
                     opcoes_t = [1600.0, 2500.0, 3000.0, 4000.0, 6300.0]
-                    padrao = float(MEDIANAS.get(feat, 2500.0))
-                    idx_padrao = min(range(len(opcoes_t)), key=lambda k: abs(opcoes_t[k]-padrao))
+                    sugerida = float(MEDIANAS.get(feat, 2500.0))
+                    if diametro_carga > 0:
+                        r = prensa_para_diametro(diametro_carga)
+                        if r["prensa_ton"] is None or r["prensa_ton"] > max(opcoes_t):
+                            st.warning(
+                                f"Carga {r['carga_ton']:.0f} t excede a maior prensa "
+                                f"({max(opcoes_t):.0f} T) — revise diâmetro / espessura "
+                                f"da alma."
+                            )
+                            sugerida = max(opcoes_t)
+                        else:
+                            sugerida = r["prensa_ton"]
+                            st.caption(
+                                f"Carga máquina: **{r['carga_ton']:.0f} t** → prensa "
+                                f"**{sugerida:.0f} T** (tolerância 5%)."
+                            )
+                    idx_padrao = min(range(len(opcoes_t)),
+                                     key=lambda k: abs(opcoes_t[k] - sugerida))
                     valores_form[feat] = st.selectbox(
-                        _rotulo_campo(feat, ROTULOS), opcoes_t, index=idx_padrao,
+                        _rotulo_campo(feat, ROTULOS) + " — ajuste se precisar",
+                        opcoes_t, index=idx_padrao,
                         format_func=lambda t: f"{t:.0f} T",
-                        key=f"{tipo_peca}_{feat}",
+                        key=f"{tipo_peca}_{feat}_{id_origem}_{int(sugerida)}",
                     )
                     continue
 
