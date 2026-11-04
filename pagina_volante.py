@@ -40,8 +40,10 @@ def render(base, analise_stp=None):
     with col_form:
         with st.form("form_volante_processo"):
             st.markdown('<p class="painel-rotulo">Dados do desenho</p>', unsafe_allow_html=True)
-            a, b = st.columns(2)
+            a, b, c = st.columns(3)
             peso = a.number_input("Peso acabado (kg)", 0.0, 500.0, peso_stp, 0.5)
+            crem = c.number_input("Peso da cremalheira (kg)", 0.0, 50.0, 0.0, 0.1,
+                                  help="Melhora a precisão: acompanha o diâmetro do volante. Vazio (0) = estima pelo peso.")
             bruto = b.number_input("Peso bruto fundido (kg)", 0.0, 500.0, 0.0, 0.5,
                                    help=f"Vazio (0) = estima pelo acabado (×{p['razao_bruto']:.2f}).")
             a, b = st.columns(2)
@@ -76,7 +78,7 @@ def render(base, analise_stp=None):
                 'e clique em Orçar.</div></div>', unsafe_allow_html=True)
         else:
             o = O.orcar(p, {
-                "peso_liquido": peso, "peso_bruto": bruto or None, "cliente_n": cliente, "mat_n": MATERIAIS[material],
+                "peso_liquido": peso, "peso_bruto": bruto or None, "p_crem": crem or None, "cliente_n": cliente, "mat_n": MATERIAIS[material],
                 "g_furos": vir + emb + radial + outros, "g_vir": vir, "g_emb": emb, "g_rosc": rosc, "g_radial": radial,
                 "g_alarg": alarg, "g_rasgos": rasgos, "g_pinos": pinos, "g_inclinado": int(inclinado)})
             st.markdown(
@@ -90,7 +92,7 @@ def render(base, analise_stp=None):
                   <div class="custo-rotulo">Com margem de segurança de {O.MARGEM:.0%}</div>
                   <div class="custo-valor">{o['com_margem']:.1f} min/peça</div>
                   <div class="custo-detalhe">Fundição do bruto, à parte: ~{o['fundicao']:.1f} min/peça (peças parecidas).
-                  Cremalheira não incluída.{' Peso bruto estimado: ' + format(o['peso_bruto'], '.1f') + ' kg.' if o['bruto_estimado'] else ''}</div>
+                  Cremalheira não incluída.{' Peso bruto estimado: ' + format(o['peso_bruto'], '.1f') + ' kg.' if o['bruto_estimado'] else ''}{' Sem o peso da cremalheira, a precisão cai.' if o['crem_estimada'] else ''}</div>
                 </div>
                 """, unsafe_allow_html=True)
             st.markdown('<p class="painel-rotulo" style="margin-top:18px;">Por etapa</p>', unsafe_allow_html=True)
@@ -114,7 +116,7 @@ def render(base, analise_stp=None):
           <div class="bt-celula"><div class="bt-rotulo">escopo</div>
             <div class="bt-valor">Volantes 46-35/85 de montadora<br>tempo da folha de processo</div></div>
           <div class="bt-celula"><div class="bt-rotulo">validação (peças de outro bruto)</div>
-            <div class="bt-valor">erro médio {m['mape']:.0f}% · mediana {m['mediana']:.0f}%<br>{m['ate20']:.0f}% das peças com erro até 20%</div></div>
+            <div class="bt-valor">com cremalheira: erro médio {m['mape']:.0f}%, {m['ate20']:.0f}% até 20%<br>sem: erro médio {m['mape_sem_crem']:.0f}%, {m['ate20_sem_crem']:.0f}% até 20%</div></div>
           <div class="bt-celula"><div class="bt-rotulo">base de treino</div>
             <div class="bt-valor">{m['n']} volantes<br>{m['n_2026']} com folha 2026</div></div>
         </div>

@@ -46,11 +46,14 @@ def parecidas(pacote, e: dict, n=5) -> pd.DataFrame:
 
 
 def orcar(pacote, entrada: dict) -> dict:
-    """entrada: peso_liquido (obrigatório), peso_bruto (opcional), g_* (furação), cliente_n, mat_n."""
+    """entrada: peso_liquido (obrigatório), peso_bruto e p_crem (opcionais), g_* (furação), cliente_n, mat_n."""
     e = dict(entrada)
     bruto_estimado = not e.get("peso_bruto")
     if bruto_estimado:
         e["peso_bruto"] = e["peso_liquido"] * pacote["razao_bruto"]
+    crem_estimada = not e.get("p_crem")
+    if crem_estimada:
+        e["p_crem"] = e["peso_liquido"] * pacote["razao_crem"]
     e["sobremetal"] = max((e["peso_bruto"] - e["peso_liquido"]) / e["peso_bruto"], 0)
     e["f2026"] = 1.0
     X = _vetor(pacote, e)
@@ -58,14 +61,16 @@ def orcar(pacote, entrada: dict) -> dict:
     bruto_etapas = {k: max(float(np.expm1(m.predict(X)[0])), 0) for k, m in pacote["etapas"].items()}
     fator = total / max(sum(bruto_etapas.values()), 1e-9)   # etapas fecham no total
     sim = parecidas(pacote, e)
+    banda = pacote["banda_sem_crem"] if crem_estimada else pacote["banda"]
     return {
         "total": total,
-        "p10": total * pacote["banda"][0],
-        "p90": total * pacote["banda"][1],
+        "p10": total * banda[0],
+        "p90": total * banda[1],
         "com_margem": total * (1 + MARGEM),
         "etapas": {ROTULO_ETAPA[k]: v * fator for k, v in bruto_etapas.items()},
         "fundicao": float(sim.t_fundicao.median()),
         "bruto_estimado": bruto_estimado,
+        "crem_estimada": crem_estimada,
         "peso_bruto": e["peso_bruto"],
         "parecidas": sim,
     }
