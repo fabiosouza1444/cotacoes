@@ -45,8 +45,24 @@ def parecidas(pacote, e: dict, n=5) -> pd.DataFrame:
     return b.assign(distancia=dist).nsmallest(n, "distancia")
 
 
+def orcar_fundido(f, peso_bruto, d_crem=None, cliente="", material="", figuras=None, extras=None) -> dict:
+    """Bruto fundido: K/figuras + extras de valor fixo. Sem figuras ou extras, usa o sugerido."""
+    if figuras:
+        n = int(figuras)
+    elif d_crem:
+        n = int(f["arvore"].predict(pd.DataFrame([[peso_bruto, d_crem]], columns=["peso_liquido", "d_crem"]))[0])
+    else:
+        n = int(np.clip(round(f["metal"] / peso_bruto), 1, 4))
+    padrao = [o for o, r in f["regras"].items() if ("cliente_n", cliente) in map(tuple, r) or ("mat_n", material) in map(tuple, r)]
+    usados = padrao if extras is None else list(extras)
+    t = f["K"] / n + sum(f["valores"][o] for o in usados)
+    (a, b), mape = f["faixas"][(bool(figuras), extras is not None)]
+    return {"tempo": t, "p10": t * a, "p90": t * b, "mape": mape, "figuras": n, "figuras_sugeridas": not figuras,
+            "extras": usados, "extras_padrao": extras is None}
+
+
 def orcar(pacote, entrada: dict) -> dict:
-    """entrada: peso_liquido (obrigatório), peso_bruto e d_crem (opcionais), g_* (furação), cliente_n, mat_n."""
+    """entrada: peso_liquido (obrigatório), peso_bruto, d_crem, figuras e extras (opcionais), g_* (furação), cliente_n, mat_n."""
     e = dict(entrada)
     bruto_estimado = not e.get("peso_bruto")
     if bruto_estimado:
@@ -66,7 +82,8 @@ def orcar(pacote, entrada: dict) -> dict:
         "p90": total * c["banda"][1],
         "com_margem": total * (1 + MARGEM),
         "etapas": {ROTULO_ETAPA[k]: v * fator for k, v in etapas.items()},
-        "fundicao": float(sim.t_fundicao.median()),
+        "fundicao": orcar_fundido(pacote["fundido"], e["peso_bruto"], e.get("d_crem"), e.get("cliente_n", ""), e.get("mat_n", ""),
+                                  e.get("figuras"), e.get("extras")),
         "bruto_estimado": bruto_estimado,
         "com_diametro": com_diametro,
         "peso_bruto": e["peso_bruto"],

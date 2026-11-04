@@ -13,6 +13,8 @@ import streamlit as st
 
 import orcamento_volante as O
 
+EXTRAS = {"torno": "Torno (eliminar massalote)", "pintura": "Pintura do fundido", "rebarbadora": "Rebarbadora robotizada",
+          "ultrassom": "Ultrassom"}
 MATERIAIS = {"Ferro fundido (não especificado)": "FOFO", "GG25 / EN-GJL-250": "FOFO_GG25",
              "GG30 / EN-GJL-300": "FOFO_GG30", "Nodular": "FOFO_NODULAR"}
 
@@ -69,6 +71,13 @@ def render(base, analise_stp=None):
                 pinos = _num("Pinos montados")
             with c:
                 inclinado = st.checkbox("Furo inclinado")
+            st.markdown('<p class="painel-rotulo" style="margin-top:14px;">Fundição do bruto</p>', unsafe_allow_html=True)
+            a, b = st.columns(2)
+            figuras = a.selectbox("Figuras na matriz", ["Sugerir", 1, 2, 3, 4],
+                                  help="Peças por molde. Sugerir usa o peso do bruto e o diâmetro.")
+            padrao = b.checkbox("Extras pelo padrão do cliente e material", True,
+                                help="Desmarque para informar abaixo; a faixa fica mais estreita.")
+            extras = st.multiselect("Extras do bruto (se desmarcou o padrão)", list(EXTRAS), format_func=EXTRAS.get)
             enviar = st.form_submit_button("Orçar", type="primary")
 
     with col_res:
@@ -78,7 +87,7 @@ def render(base, analise_stp=None):
                 'e clique em Orçar.</div></div>', unsafe_allow_html=True)
         else:
             o = O.orcar(p, {
-                "peso_liquido": peso, "peso_bruto": bruto or None, "d_crem": diam or None, "cliente_n": cliente, "mat_n": MATERIAIS[material],
+                "peso_liquido": peso, "peso_bruto": bruto or None, "d_crem": diam or None, "figuras": None if figuras == "Sugerir" else figuras, "extras": None if padrao else extras, "cliente_n": cliente, "mat_n": MATERIAIS[material],
                 "g_furos": vir + emb + radial + outros, "g_vir": vir, "g_emb": emb, "g_rosc": rosc, "g_radial": radial,
                 "g_alarg": alarg, "g_rasgos": rasgos, "g_pinos": pinos, "g_inclinado": int(inclinado)})
             st.markdown(
@@ -91,8 +100,19 @@ def render(base, analise_stp=None):
                 <div class="custo">
                   <div class="custo-rotulo">Com margem de segurança de {O.MARGEM:.0%}</div>
                   <div class="custo-valor">{o['com_margem']:.1f} min/peça</div>
-                  <div class="custo-detalhe">Fundição do bruto, à parte: ~{o['fundicao']:.1f} min/peça (peças parecidas).
-                  Cremalheira não incluída.{' Peso bruto estimado: ' + format(o['peso_bruto'], '.1f') + ' kg.' if o['bruto_estimado'] else ''}{'' if o['com_diametro'] else ' Sem o diâmetro da cremalheira, a faixa fica mais larga.'}</div>
+                  <div class="custo-detalhe">Cremalheira não incluída.{' Peso bruto estimado: ' + format(o['peso_bruto'], '.1f') + ' kg.' if o['bruto_estimado'] else ''}{'' if o['com_diametro'] else ' Sem o diâmetro da cremalheira, a faixa fica mais larga.'}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            f = o["fundicao"]
+            nomes = ", ".join(EXTRAS[x].lower() for x in f["extras"]) or "nenhum"
+            st.markdown(
+                f"""
+                <div class="custo">
+                  <div class="custo-rotulo">Fundição do bruto, à parte</div>
+                  <div class="custo-valor">{f['tempo']:.1f} min/peça</div>
+                  <div class="custo-detalhe">Faixa {f['p10']:.1f} a {f['p90']:.1f} min.
+                  {f['figuras']} figura(s) na matriz{' (sugerido)' if f['figuras_sugeridas'] else ''};
+                  extras: {nomes}{' (padrão)' if f['extras_padrao'] else ''}.</div>
                 </div>
                 """, unsafe_allow_html=True)
             st.markdown('<p class="painel-rotulo" style="margin-top:18px;">Por etapa</p>', unsafe_allow_html=True)
