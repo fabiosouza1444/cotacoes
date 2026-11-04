@@ -8,7 +8,7 @@ dos bancos: é o que o app usa.
 As folhas revisadas em 2026 estão mais completas que as antigas (mais operações
 com tempo lançado; ~34% a mais no mesmo volante, com peso, furos e cliente
 iguais). O modelo aprende com todas, marcando a folha 2026, e orça sempre no
-padrão 2026.
+padrão 2026. Com o diâmetro da cremalheira usa o modelo "com"; sem ele, o "sem".
 """
 import joblib
 import numpy as np
@@ -24,16 +24,16 @@ def carregar(caminho="modelo_tempo_volante.pkl"):
     return joblib.load(caminho)
 
 
-def _vetor(pacote, e: dict) -> pd.DataFrame:
-    linha = {c: 0.0 for c in pacote["colunas"]}
-    for c in pacote["numericas"]:
-        linha[c] = float(np.log1p(max(float(e.get(c) or 0), 0)))
-    for col, validos in pacote["categorias"].items():
+def _vetor(c, e: dict) -> pd.DataFrame:
+    linha = {k: 0.0 for k in c["colunas"]}
+    for k in c["numericas"]:
+        linha[k] = float(np.log1p(max(float(e.get(k) or 0), 0)))
+    for col, validos in c["categorias"].items():
         v = e.get(col) or ""
         chave = f"{col}_{v if v in validos else 'OUTRO'}"
         if chave in linha:
             linha[chave] = 1.0
-    return pd.DataFrame([linha], columns=pacote["colunas"])
+    return pd.DataFrame([linha], columns=c["colunas"])
 
 
 def parecidas(pacote, e: dict, n=5) -> pd.DataFrame:
@@ -46,31 +46,29 @@ def parecidas(pacote, e: dict, n=5) -> pd.DataFrame:
 
 
 def orcar(pacote, entrada: dict) -> dict:
-    """entrada: peso_liquido (obrigatório), peso_bruto e p_crem (opcionais), g_* (furação), cliente_n, mat_n."""
+    """entrada: peso_liquido (obrigatório), peso_bruto e d_crem (opcionais), g_* (furação), cliente_n, mat_n."""
     e = dict(entrada)
     bruto_estimado = not e.get("peso_bruto")
     if bruto_estimado:
         e["peso_bruto"] = e["peso_liquido"] * pacote["razao_bruto"]
-    crem_estimada = not e.get("p_crem")
-    if crem_estimada:
-        e["p_crem"] = e["peso_liquido"] * pacote["razao_crem"]
     e["sobremetal"] = max((e["peso_bruto"] - e["peso_liquido"]) / e["peso_bruto"], 0)
     e["f2026"] = 1.0
-    X = _vetor(pacote, e)
-    total = float(np.expm1(pacote["modelo"].predict(X)[0]))
-    bruto_etapas = {k: max(float(np.expm1(m.predict(X)[0])), 0) for k, m in pacote["etapas"].items()}
-    fator = total / max(sum(bruto_etapas.values()), 1e-9)   # etapas fecham no total
+    com_diametro = bool(e.get("d_crem"))
+    c = pacote["com" if com_diametro else "sem"]
+    X = _vetor(c, e)
+    total = float(np.expm1(c["modelo"].predict(X)[0]))
+    etapas = {k: max(float(np.expm1(m.predict(X)[0])), 0) for k, m in c["etapas"].items()}
+    fator = total / max(sum(etapas.values()), 1e-9)   # etapas fecham no total
     sim = parecidas(pacote, e)
-    banda = pacote["banda_sem_crem"] if crem_estimada else pacote["banda"]
     return {
         "total": total,
-        "p10": total * banda[0],
-        "p90": total * banda[1],
+        "p10": total * c["banda"][0],
+        "p90": total * c["banda"][1],
         "com_margem": total * (1 + MARGEM),
-        "etapas": {ROTULO_ETAPA[k]: v * fator for k, v in bruto_etapas.items()},
+        "etapas": {ROTULO_ETAPA[k]: v * fator for k, v in etapas.items()},
         "fundicao": float(sim.t_fundicao.median()),
         "bruto_estimado": bruto_estimado,
-        "crem_estimada": crem_estimada,
+        "com_diametro": com_diametro,
         "peso_bruto": e["peso_bruto"],
         "parecidas": sim,
     }
