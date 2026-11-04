@@ -100,7 +100,7 @@ def render(base, analise_stp=None):
                 <div class="custo">
                   <div class="custo-rotulo">Com margem de segurança de {O.MARGEM:.0%}</div>
                   <div class="custo-valor">{o['com_margem']:.1f} min/peça</div>
-                  <div class="custo-detalhe">Cremalheira não incluída.{' Peso bruto estimado: ' + format(o['peso_bruto'], '.1f') + ' kg.' if o['bruto_estimado'] else ''}{'' if o['com_diametro'] else ' Sem o diâmetro da cremalheira, a faixa fica mais larga.'}</div>
+                  <div class="custo-detalhe">{' Peso bruto estimado: ' + format(o['peso_bruto'], '.1f') + ' kg.' if o['bruto_estimado'] else ''}{'' if o['com_diametro'] else ' Sem o diâmetro da cremalheira, a faixa fica mais larga.'}</div>
                 </div>
                 """, unsafe_allow_html=True)
             f = o["fundicao"]
@@ -115,7 +115,23 @@ def render(base, analise_stp=None):
                   extras: {nomes}{' (padrão)' if f['extras_padrao'] else ''}.</div>
                 </div>
                 """, unsafe_allow_html=True)
-            st.markdown('<p class="painel-rotulo" style="margin-top:18px;">Por etapa</p>', unsafe_allow_html=True)
+            cr = o["cremalheira"]
+            st.markdown(
+                f"""
+                <div class="custo">
+                  <div class="custo-rotulo">Cremalheira, à parte (padrão)</div>
+                  <div class="custo-valor">{cr['tempo']:.1f} min/peça</div>
+                  <div class="custo-detalhe">Faixa {cr['tempo'] * cr['banda'][0]:.0f} a {cr['tempo'] * cr['banda'][1]:.0f} min.
+                  Mais têmpera por indução: {cr['tempera']:.1f} min (tarifa própria).</div>
+                </div>
+                <div class="custo">
+                  <div class="custo-rotulo">Volante completo (bruto + usinagem + cremalheira + têmpera)</div>
+                  <div class="custo-valor">{o['completo']:.1f} min/peça</div>
+                  <div class="custo-detalhe">Com margem de {O.MARGEM:.0%}: {o['completo_margem']:.1f} min/peça. Soma de áreas com
+                  custo por minuto diferente: use as parcelas para custear.</div>
+                </div>
+                """, unsafe_allow_html=True)
+            st.markdown('<p class="painel-rotulo" style="margin-top:18px;">Por etapa (usinagem)</p>', unsafe_allow_html=True)
             st.dataframe(pd.DataFrame({"Etapa": list(o["etapas"]), "min/peça": [round(v, 1) for v in o["etapas"].values()]}),
                          hide_index=True, width="stretch")
 

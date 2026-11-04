@@ -76,14 +76,20 @@ def orcar(pacote, entrada: dict) -> dict:
     etapas = {k: max(float(np.expm1(m.predict(X)[0])), 0) for k, m in c["etapas"].items()}
     fator = total / max(sum(etapas.values()), 1e-9)   # etapas fecham no total
     sim = parecidas(pacote, e)
+    fundido = orcar_fundido(pacote["fundido"], e["peso_bruto"], e.get("d_crem"), e.get("cliente_n", ""), e.get("mat_n", ""),
+                            e.get("figuras"), e.get("extras"))
+    crem = pacote["cremalheira"]
+    completo = total + fundido["tempo"] + crem["tempo"] + crem["tempera"]
     return {
         "total": total,
         "p10": total * c["banda"][0],
         "p90": total * c["banda"][1],
         "com_margem": total * (1 + MARGEM),
         "etapas": {ROTULO_ETAPA[k]: v * fator for k, v in etapas.items()},
-        "fundicao": orcar_fundido(pacote["fundido"], e["peso_bruto"], e.get("d_crem"), e.get("cliente_n", ""), e.get("mat_n", ""),
-                                  e.get("figuras"), e.get("extras")),
+        "fundicao": fundido,
+        "cremalheira": crem,
+        "completo": completo,
+        "completo_margem": completo * (1 + MARGEM),
         "bruto_estimado": bruto_estimado,
         "com_diametro": com_diametro,
         "peso_bruto": e["peso_bruto"],
