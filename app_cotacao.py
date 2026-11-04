@@ -123,6 +123,10 @@ CATALOGO_MODELOS = {
         "legenda": "Dois números do bloco de título do desenho: a massa "
                    "da peça acabada e o maior diâmetro cotado.",
     },
+    "volante_processo": {
+        "rotulo": "Volante",
+        "sub": "tempo de processo (folhas, montadora)",
+    },
     "engrenagem": {
         "rotulo": "Engrenagem",
         "sub": "usinagem, peça forjada",
@@ -392,7 +396,7 @@ with col_sel:
 # Densidade usada pra estimar peso a partir do volume do .stp -- ferro
 # fundido pro volante (peca fundida), aco pra engrenagem (peca forjada).
 # Sao valores tipicos de engenharia, nao a liga exata de cada PIC.
-_DENSIDADE_KG_M3 = {"volante": 7200.0, "engrenagem": 7850.0, "forjaria": 7850.0}
+_DENSIDADE_KG_M3 = {"volante": 7200.0, "volante_processo": 7200.0, "engrenagem": 7850.0, "forjaria": 7850.0}
 
 
 @st.cache_data(show_spinner=False)
@@ -402,6 +406,8 @@ def _analisar_stp_cache(stp_bytes: bytes, densidade: float) -> dict:
     # do Streamlit), nao reconverte/reanalisa de novo.
     return visor3d.analisar_stp_bytes(stp_bytes, densidade_kg_m3=densidade)
 
+
+tipo_3d = "volante" if tipo_peca == "volante_processo" else tipo_peca
 
 with col_3d:
     arquivo_stp = st.file_uploader(
@@ -433,13 +439,20 @@ with col_3d:
             unsafe_allow_html=True,
         )
     else:
-        components.html(visor3d.render_html(tipo_peca, altura_px=190), height=192)
+        components.html(visor3d.render_html(tipo_3d, altura_px=190), height=192)
         st.markdown(
-            f'<p class="cota-eixo-legenda" style="margin-top:-4px;">{visor3d.legenda(tipo_peca)}</p>',
+            f'<p class="cota-eixo-legenda" style="margin-top:-4px;">{visor3d.legenda(tipo_3d)}</p>',
             unsafe_allow_html=True,
         )
 
 st.markdown('<hr class="cab-regua">', unsafe_allow_html=True)
+
+# Tempo de processo do volante tem página própria: outro alvo (tempo de folha)
+# e outras entradas (furação). A aba Volante acima segue igual.
+if tipo_peca == "volante_processo":
+    import pagina_volante
+    pagina_volante.render(BASE, analise_stp)
+    st.stop()
 
 info_modelo = CATALOGO_MODELOS[tipo_peca]
 art = carregar_modelo(info_modelo["pkl"])
